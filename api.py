@@ -1,6 +1,7 @@
 # coding: utf-8
 # Импортирует поддержку UTF-8.
 from __future__ import unicode_literals
+
 # Импортируем модули для игры
 import random
 import emoji
@@ -34,8 +35,27 @@ true_answers = [
 wrong_answers = [
     'Нет!\n',
     'Подумай еще...\n',
-    'Не угадал\n'
+    'Не угадал.\n'
 ]
+not_valid_answers = [
+    'Пытаешься меня отвлечь?)\n',
+    'Извините?\n',
+    'Это не ответ.\n',
+    'Может это и так.\n',
+]
+digit_answer = [
+        'ноль', '0',
+        'один', '1',
+        'два', '2',
+        'три', '3',
+        'четыре', '4',
+        'пять', '5',
+        'шесть', '6',
+        'семь', '7',
+        'восемь', '8',
+        'девять', '9',
+        'десять', '10'
+    ]
 
 # Списки с различными эмоджи пальцев
 fingers_null = [
@@ -139,117 +159,83 @@ def handle_dialog(req, res):
         res['response']['text'] = 'Привет, давай сыграем!\n'
         # Сохраняем данные о пальцах, добавляем правила
         sessionStorage[user_id]['fingers_prev'] = fingers_curr
-        sessionStorage[user_id]['fingers_curr'] = start_game(res, fingers_prev, fingers_curr)
+        sessionStorage[user_id]['fingers_curr'] = first_question(res, fingers_prev, fingers_curr)
 
-        res['response']['buttons'] = get_suggests(user_id)
+        # res['response']['buttons'] = get_suggests(user_id)
         return
 
     # Обрабатываем ответ пользователя.
-    if req['request']['original_utterance'].lower() in [
-        'ноль', '0',
-        'один', '1',
-        'два', '2',
-        'три', '3',
-        'четыре', '4',
-        'пять', '5',
-        'шесть', '6',
-        'семь', '7',
-        'восемь', '8',
-        'девять', '9',
-        'десять', '10'
-    ]:
-        # Достаём данные из хранилища
+    if req['request']['original_utterance'].lower() in digit_answer:
+        # Получаем данные из хранилища
         fingers_prev = sessionStorage[user_id]['fingers_prev']
         fingers_curr = sessionStorage[user_id]['fingers_curr']
         count_success = sessionStorage[user_id]['count_success']
         count_fail = sessionStorage[user_id]['count_fail']
 
-        # Проверяем ответ клиента
+	# Получаем данные из ответа клиента 
         client_numb = -1
         for obj in req['request']['nlu']['entities']:
             if obj['type'] == 'YANDEX.NUMBER':
                 client_numb = obj['value']
                 break
 
+	# Проверяем ответ клиента
         if client_numb == fingers_prev:
             res['response']['text'] = random.choice(true_answers)
             count_fail = 0
             count_success += 1
         else:
-            res['response']['text'] = random.choice(wrong_answers) + ' это ' + str(fingers_prev) + ' пальцев\n'
+            res['response']['text'] = random.choice(wrong_answers) + ' это ' + str(fingers_prev) + ' ' + get_finger_word(fingers_prev) + '\n'
             count_fail += 1
             count_success = 0
 
+	# Сохраняем счётчики
         sessionStorage[user_id]['count_fail'] = count_fail
         sessionStorage[user_id]['count_success'] = count_success
-        '''?!!!'''
-        '''if count_success == 4:
-            count_success = 0
-            res['response']['text'] += 'Ого, кажется ты смог разобраться в этой игре! Прими мои поздравления!\n'''
+
         # Задаём новый вопрос
         if count_fail == 5:
             fingers_prev = random.randint(0, 10)
             fingers_curr = random.randint(0, 10)
+            
             sessionStorage[user_id]['fingers_prev'] = fingers_curr
-            sessionStorage[user_id]['fingers_curr'] = start_game(res, fingers_prev, fingers_curr)
+            sessionStorage[user_id]['fingers_curr'] = first_question(res, fingers_prev, fingers_curr)
+            
             sessionStorage[user_id]['count_fail'] = 0
-            sessionStorage[user_id]['count_success'] = 0
+            # sessionStorage[user_id]['count_success'] = 0
             return
         else:
+	    if count_success == 4:
+                # sessionStorage[user_id]['count_fail'] = 0
+                sessionStorage[user_id]['count_success'] = 0
+		# Добавить поле win = 1 в sessionStorage и реализовать удаление пользователя из sessionStorage
+                res['response']['text'] += 'Ого, кажется ты смог разобраться в этой игре! Прими мои поздравления!\n'
+
             fingers_prev = fingers_curr
             fingers_curr = random.randint(0, 10)
+
             res['response']['text'] += random.choice(asks)
             if random.randint(0, 2) == 0:
                 res['response']['text'] += random.choice(other_emoji)
             res['response']['text'] += get_fingers(fingers_curr)
+
             sessionStorage[user_id]['fingers_prev'] = fingers_prev
             sessionStorage[user_id]['fingers_curr'] = fingers_curr
 
         return
 
-    # Если нет, то убеждаем его купить слона!
-    '''просим ввести правильный ответ'''
-    '''res['response']['text'] = 'Все говорят "%s", а ты введи число' % (
-        req['request']['original_utterance']
-    )'''
-    res['response']['text'] = 'Пытаешься меня отвлечь?)'
-    res['response']['buttons'] = get_suggests(user_id)
+    # Если нет, просим ответить по другому
+    res['response']['text'] = random.choice(not_valid_answers)
 
 
 # Демонстрирует правила
-def start_game(res, fingers_prev, fingers_curr):
+def first_question(res, fingers_prev, fingers_curr):
     fingers_next = random.randint(0, 10)
-    res['response']['text'] += 'Смотри, это ' + get_fingers(fingers_prev) + ' - ' + str(fingers_prev) + ' пальцев.\n' + \
-                               'и это: ' + get_fingers(fingers_curr) + ' - ' + str(fingers_prev) + ' пальцев\n' +\
+    res['response']['text'] += 'Смотри, это ' + get_fingers(fingers_prev) + ' - ' + str(fingers_prev) + ' ' + get_finger_word(fingers_prev) + '\n' +\
+                               'и это: ' + get_fingers(fingers_curr) + ' - ' + str(fingers_prev) + ' ' + get_finger_word(fingers_prev) + '\n' +\
                                'А сколько это пальцев? ' + get_fingers(fingers_next)
 
     return fingers_next
-
-
-# Функция возвращает две подсказки для ответа.
-def get_suggests(user_id):
-    session = sessionStorage[user_id]
-
-    # Выбираем две первые подсказки из массива.
-    suggests = [
-        {'title': suggest, 'hide': True}
-        for suggest in session['suggests'][:2]
-    ]
-
-    # Убираем первую подсказку, чтобы подсказки менялись каждый раз.
-    session['suggests'] = session['suggests'][1:]
-    sessionStorage[user_id] = session
-
-    # Если осталась только одна подсказка, предлагаем подсказку
-    # со ссылкой на Яндекс.Маркет.
-    if len(suggests) < 2:
-        suggests.append({
-            "title": "Ладно",
-            "url": "https://market.yandex.ru/search?text=слон",
-            "hide": True
-        })
-
-    return suggests
 
 
 def get_fingers(fingers):
@@ -276,4 +262,41 @@ def get_fingers(fingers):
     elif fingers == 10:
         return random.choice(fingers_ten)
     return False
+
+
+def get_finger_word(fingers):
+    if fingers == 0 or fingers > 4:
+	return 'пальцев'
+    elif 1 < fingers < 5:
+	return 'пальца'
+    elif fingers == 1:
+	return 'палец' 	
+	
+	
+'''
+# Функция возвращает две подсказки для ответа.
+def get_suggests(user_id):
+    session = sessionStorage[user_id]
+
+    # Выбираем две первые подсказки из массива.
+    suggests = [
+        {'title': suggest, 'hide': True}
+        for suggest in session['suggests'][:2]
+    ]
+
+    # Убираем первую подсказку, чтобы подсказки менялись каждый раз.
+    session['suggests'] = session['suggests'][1:]
+    sessionStorage[user_id] = session
+
+    # Если осталась только одна подсказка, предлагаем подсказку
+    # со ссылкой на Яндекс.Маркет.
+    if len(suggests) < 2:
+        suggests.append({
+            "title": "Ладно",
+            "url": "https://market.yandex.ru/search?text=слон",
+            "hide": True
+        })
+
+    return suggests
+'''	
 
