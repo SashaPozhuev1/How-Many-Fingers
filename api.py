@@ -146,16 +146,17 @@ def handle_dialog(req, res):
 
     # Обрабатываем ответ пользователя.
     if req['request']['original_utterance'].lower() in [
-        'один',
-        'два',
-        'три',
-        'четыре',
-        'пять',
-        'шесть',
-        'семь',
-        'восемь',
-        'девять',
-        'десять'
+        'ноль', '0',
+        'один', '1',
+        'два', '2',
+        'три', '3',
+        'четыре', '4',
+        'пять', '5',
+        'шесть', '6',
+        'семь', '7',
+        'восемь', '8',
+        'девять', '9',
+        'десять', '10'
     ]:
         # Достаём данные из хранилища
         fingers_prev = sessionStorage[user_id]['fingers_prev']
@@ -186,7 +187,7 @@ def handle_dialog(req, res):
             count_success = 0
             res['response']['text'] += 'Ого, кажется ты смог разобраться в этой игре! Прими мои поздравления!\n'''
         # Задаём новый вопрос
-        if count_fail == 6:
+        if count_fail == 5:
             fingers_prev = random.randint(0, 10)
             fingers_curr = random.randint(0, 10)
             sessionStorage[user_id]['fingers_prev'] = fingers_curr
@@ -208,9 +209,10 @@ def handle_dialog(req, res):
 
     # Если нет, то убеждаем его купить слона!
     '''просим ввести правильный ответ'''
-    res['response']['text'] = 'Все говорят "%s", а ты введи число' % (
+    '''res['response']['text'] = 'Все говорят "%s", а ты введи число' % (
         req['request']['original_utterance']
-    )
+    )'''
+    res['response']['text'] = 'Пытаешься меня отвлечь?)'
     res['response']['buttons'] = get_suggests(user_id)
 
 
