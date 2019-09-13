@@ -64,7 +64,8 @@ def handle_dialog(req, res):
             'fingers_prev': fingers_prev,
             'fingers_curr': fingers_curr,
             'count_fail': 0,
-            'count_success': 0
+            'count_success': 0,
+            'win': 0
         }
 
         res['response']['text'] = 'Привет, давай сыграем!\n'
@@ -72,7 +73,6 @@ def handle_dialog(req, res):
         sessionStorage[user_id]['fingers_prev'] = fingers_curr
         sessionStorage[user_id]['fingers_curr'] = first_question(res, fingers_prev, fingers_curr)
 
-        # res['response']['buttons'] = get_suggests(user_id)
         return
 
     # Обрабатываем ответ пользователя.
@@ -113,14 +113,14 @@ def handle_dialog(req, res):
             sessionStorage[user_id]['fingers_curr'] = first_question(res, fingers_prev, fingers_curr)
 
             sessionStorage[user_id]['count_fail'] = 0
-            # sessionStorage[user_id]['count_success'] = 0
             return
         else:
             if count_success == 4:
-                # sessionStorage[user_id]['count_fail'] = 0
                 sessionStorage[user_id]['count_success'] = 0
                 # Добавить поле win = 1 в sessionStorage и реализовать удаление пользователя из sessionStorage
                 res['response']['text'] += 'Ого, кажется ты смог разобраться в этой игре! Прими мои поздравления!\n'
+                res['response']['end_session'] = True
+                return
 
             fingers_prev = fingers_curr
             fingers_curr = random.randint(0, 10)
@@ -184,32 +184,4 @@ def get_finger_word(fingers):
         return 'пальца'
     elif fingers == 1:
         return 'палец'
-
-
-'''
-# Функция возвращает две подсказки для ответа.
-def get_suggests(user_id):
-    session = sessionStorage[user_id]
-
-    # Выбираем две первые подсказки из массива.
-    suggests = [
-        {'title': suggest, 'hide': True}
-        for suggest in session['suggests'][:2]
-    ]
-
-    # Убираем первую подсказку, чтобы подсказки менялись каждый раз.
-    session['suggests'] = session['suggests'][1:]
-    sessionStorage[user_id] = session
-
-    # Если осталась только одна подсказка, предлагаем подсказку
-    # со ссылкой на Яндекс.Маркет.
-    if len(suggests) < 2:
-        suggests.append({
-            "title": "Ладно",
-            "url": "https://market.yandex.ru/search?text=слон",
-            "hide": True
-        })
-
-    return suggests
-'''
 
