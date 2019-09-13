@@ -76,19 +76,18 @@ def handle_dialog(req, res):
         return
 
     # Обрабатываем ответ пользователя.
-    if req['request']['original_utterance'].lower() in digit_answers:
+    client_numb = -1
+    for obj in req['request']['nlu']['entities']:
+        if obj['type'] == 'YANDEX.NUMBER':
+            client_numb = obj['value']
+            break
+
+    if -1 < client_numb < 11:
         # Получаем данные из хранилища
         fingers_prev = sessionStorage[user_id]['fingers_prev']
         fingers_curr = sessionStorage[user_id]['fingers_curr']
         count_success = sessionStorage[user_id]['count_success']
         count_fail = sessionStorage[user_id]['count_fail']
-
-        # Получаем данные из ответа клиента
-        client_numb = -1
-        for obj in req['request']['nlu']['entities']:
-            if obj['type'] == 'YANDEX.NUMBER':
-                client_numb = obj['value']
-                break
 
         # Проверяем ответ клиента
         if client_numb == fingers_prev:
