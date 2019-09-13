@@ -49,26 +49,24 @@ def main():
 def handle_dialog(req, res):
     user_id = req['session']['user_id']
 
-    if req['session']['new']:
+    if req['session']['new'] or user_id not in sessionStorage:
         # Это новый пользователь.
         # Инициализируем сессию и поприветствуем его, показав правила игры
         fingers_prev = random.randint(0, 10)
         fingers_curr = random.randint(0, 10)
 
         sessionStorage[user_id] = {
-            'suggests': [
-                "Не хочу.",
-                "Не буду.",
-                "Отстань!",
-            ],
             'fingers_prev': fingers_prev,
             'fingers_curr': fingers_curr,
             'count_fail': 0,
             'count_success': 0,
-            'win': 0
+            'count_game': 0
         }
 
-        res['response']['text'] = 'Привет, давай сыграем!\n'
+        if req['session']['new']:
+            res['response']['text'] = 'Привет, давай сыграем!\n'
+        else:
+            res['response']['text'] = 'Решил сыграть ещё раз?\n'
         # Сохраняем данные о пальцах, добавляем правила
         sessionStorage[user_id]['fingers_prev'] = fingers_curr
         sessionStorage[user_id]['fingers_curr'] = first_question(res, fingers_prev, fingers_curr)
@@ -77,12 +75,13 @@ def handle_dialog(req, res):
 
     # Обрабатываем ответ пользователя.
     client_numb = -1
+    client_count = 0
     for obj in req['request']['nlu']['entities']:
         if obj['type'] == 'YANDEX.NUMBER':
             client_numb = obj['value']
-            break
+            client_count += 1
 
-    if -1 < client_numb < 11:
+    if client_count == 1 and -1 < client_numb < 11:
         # Получаем данные из хранилища
         fingers_prev = sessionStorage[user_id]['fingers_prev']
         fingers_curr = sessionStorage[user_id]['fingers_curr']
@@ -103,6 +102,7 @@ def handle_dialog(req, res):
         # Сохраняем счётчики
         sessionStorage[user_id]['count_fail'] = count_fail
         sessionStorage[user_id]['count_success'] = count_success
+        # sessionStorage[user_id]['count_game'] += 1
 
         # Задаём новый вопрос
         if count_fail == 5:
@@ -116,10 +116,8 @@ def handle_dialog(req, res):
             return
         else:
             if count_success == 4:
-                sessionStorage[user_id]['count_success'] = 0
-                # Добавить поле win = 1 в sessionStorage и реализовать удаление пользователя из sessionStorage
                 res['response']['text'] += 'Ого, кажется ты смог разобраться в этой игре! Прими мои поздравления!\n'
-                res['response']['end_session'] = True
+                sessionStorage.pop(user_id)
                 return
 
             fingers_prev = fingers_curr
@@ -137,6 +135,8 @@ def handle_dialog(req, res):
 
     # Если нет, просим ответить по другому
     res['response']['text'] = random.choice(not_valid_answers)
+    if client_count > 1:
+        res['response']['text'] += 'Пожалуйста выберите один ответ.\n'
 
 
 # Демонстрирует правила
